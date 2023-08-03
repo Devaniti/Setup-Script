@@ -1,6 +1,6 @@
 # Script for setting up new Windows 11 PC for graphic development
 # You need need to run it with administator rights
-if(!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
+if (!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
     Start-Process -FilePath PowerShell.exe -Verb Runas -ArgumentList @("-ExecutionPolicy Bypass", "-File `"$($MyInvocation.MyCommand.Path)`"")
     Exit
 }
@@ -120,108 +120,106 @@ function PromptUser() {
     return $Result
 }
 
-try {
-    $Settings = PromptUser
+$Settings = PromptUser
 
-    if ($null -eq $Settings) {
-        return
-    }
-    
-    # Windows explorer settings
-    if ($Settings[0].Selected -eq $true) {
-        # Sets option to always show file extensions
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name HideFileExt -Value 0
-    }
-    
-    if ($Settings[1].Selected -eq $true) {
-        # Sets option to show hidden files (but not OS protected files)
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name Hidden -Value 1
-    }
-    
-    if ($Settings[2].Selected -eq $true) {
-        # Sets option to show full path instead of just folder name in file explorer window title
-        New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -ErrorAction 'SilentlyContinue'
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -Name FullPath -Value 1
-    }
-    
-    if ($Settings[3].Selected -eq $true) {
-        # Reverts Windows 11's right mouse click menu back to full Windows 10 like menu
-        New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -ErrorAction 'SilentlyContinue'
-        New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -ErrorAction 'SilentlyContinue'
-        Set-ItemProperty -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(Default)" -Value "" -ErrorAction 'SilentlyContinue'
-    }
-    
-    if ($Settings[4].Selected -eq $true) {
-        # Enables Windows developer mode, which is required for some features (e.g. DXR debugging in PIX)
-        Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name AllowDevelopmentWithoutDevLicense -Value 1
-    }
-    
-    if ($Settings[5].Selected -eq $true) {
-        # Adds Graphic Tools package required for d3d12 debug layer
-        Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0"
-    }
-    
-    if ($Settings[10].Selected -eq $true) {
-        Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-        Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
-        Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.7.3/Microsoft.UI.Xaml.2.7.x64.appx -OutFile Microsoft.UI.Xaml.2.7.x64.appx
-        Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction 'SilentlyContinue'
-        Add-AppxPackage Microsoft.UI.Xaml.2.7.x64.appx -ErrorAction 'SilentlyContinue'
-        Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -ErrorAction 'SilentlyContinue'
-    }
-    
-    Foreach ($i in $Settings) {
-        if ($i.Selected -and ($null -ne $i.Package)) {
-            winget install -e --accept-source-agreements --accept-package-agreements $i.Package
-        }
-    }
-    
-    if (($Settings[17].Selected -eq $true) -or ($Settings[18].Selected -eq $true) -or ($Settings[19].Selected -eq $true) -or ($Settings[20].Selected -eq $true)) {
-        Set-ExecutionPolicy unrestricted -Scope Process -Force
-    
-        if (-not (Get-Module -ListAvailable -Name VSSetup)) {
-            Install-PackageProvider NuGet -Force
-            Set-PSRepository PSGallery -InstallationPolicy Trusted
-            Install-Module VSSetup -Scope CurrentUser -Repository PSGallery
-        }
-    
-        $commandLineArgs = @("modify")
-        $commandLineArgs += "--installWhileDownloading"
-        $commandLineArgs += "--passive"
-        $commandLineArgs += "--norestart"
-    
-        if ($Settings[17].Selected -eq $true) {
-            $commandLineArgs += "--add Microsoft.VisualStudio.Workload.ManagedDesktop"
-        }
-        
-        if ($Settings[18].Selected -eq $true) {
-            $commandLineArgs += " --add Microsoft.VisualStudio.Workload.NativeDesktop"
-        }
-        
-        if ($Settings[19].Selected -eq $true) {
-            $commandLineArgs += " --add Microsoft.VisualStudio.Workload.Universal"
-        }
-        
-        if ($Settings[20].Selected -eq $true) {
-            $commandLineArgs += " --add Microsoft.VisualStudio.Workload.NativeGame"
-        }
-        
-        Foreach ($i in Get-VSSetupInstance) {
-            $installPath = $i.InstallationPath
-            $currentcommandLineArgs = ($commandLineArgs + "--installPath `"$installPath`"")
-            Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installershell.exe" -Wait -ArgumentList $currentcommandLineArgs
-        }
-    }
-    
-    if ($Settings[5].Selected -eq $true) {
-        # Adds Graphic Tools package required for d3d12 debug layer
-        Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0"
-    }
-    
-    if ($Settings[36].Selected -eq $true) {
-        Restart-Computer
-    }
-}
-finally {
+if ($null -eq $Settings) {
     Pop-Location
+    return
 }
+    
+# Windows explorer settings
+if ($Settings[0].Selected -eq $true) {
+    # Sets option to always show file extensions
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name HideFileExt -Value 0
+}
+    
+if ($Settings[1].Selected -eq $true) {
+    # Sets option to show hidden files (but not OS protected files)
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name Hidden -Value 1
+}
+    
+if ($Settings[2].Selected -eq $true) {
+    # Sets option to show full path instead of just folder name in file explorer window title
+    New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -ErrorAction 'SilentlyContinue'
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -Name FullPath -Value 1
+}
+    
+if ($Settings[3].Selected -eq $true) {
+    # Reverts Windows 11's right mouse click menu back to full Windows 10 like menu
+    New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -ErrorAction 'SilentlyContinue'
+    New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -ErrorAction 'SilentlyContinue'
+    Set-ItemProperty -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(Default)" -Value "" -ErrorAction 'Continue'
+}
+    
+if ($Settings[4].Selected -eq $true) {
+    # Enables Windows developer mode, which is required for some features (e.g. DXR debugging in PIX)
+    Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name AllowDevelopmentWithoutDevLicense -Value 1
+}
+    
+if ($Settings[5].Selected -eq $true) {
+    # Adds Graphic Tools package required for d3d12 debug layer
+    Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0" -ErrorAction 'Continue'
+}
+    
+if ($Settings[10].Selected -eq $true) {
+    Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+    Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
+    Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.7.3/Microsoft.UI.Xaml.2.7.x64.appx -OutFile Microsoft.UI.Xaml.2.7.x64.appx
+    Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction 'SilentlyContinue'
+    Add-AppxPackage Microsoft.UI.Xaml.2.7.x64.appx -ErrorAction 'SilentlyContinue'
+    Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -ErrorAction 'SilentlyContinue'
+}
+    
+Foreach ($i in $Settings) {
+    if ($i.Selected -and ($null -ne $i.Package)) {
+        winget install -e --accept-source-agreements --accept-package-agreements $i.Package
+    }
+}
+    
+if (($Settings[17].Selected -eq $true) -or ($Settings[18].Selected -eq $true) -or ($Settings[19].Selected -eq $true) -or ($Settings[20].Selected -eq $true)) {
+    Set-ExecutionPolicy unrestricted -Scope Process -Force
+    
+    if (-not (Get-Module -ListAvailable -Name VSSetup)) {
+        Install-PackageProvider NuGet -Force
+        Set-PSRepository PSGallery -InstallationPolicy Trusted
+        Install-Module VSSetup -Scope CurrentUser -Repository PSGallery
+    }
+    
+    $commandLineArgs = @("modify")
+    $commandLineArgs += "--installWhileDownloading"
+    $commandLineArgs += "--passive"
+    $commandLineArgs += "--norestart"
+    
+    if ($Settings[17].Selected -eq $true) {
+        $commandLineArgs += "--add Microsoft.VisualStudio.Workload.ManagedDesktop"
+    }
+        
+    if ($Settings[18].Selected -eq $true) {
+        $commandLineArgs += " --add Microsoft.VisualStudio.Workload.NativeDesktop"
+    }
+        
+    if ($Settings[19].Selected -eq $true) {
+        $commandLineArgs += " --add Microsoft.VisualStudio.Workload.Universal"
+    }
+        
+    if ($Settings[20].Selected -eq $true) {
+        $commandLineArgs += " --add Microsoft.VisualStudio.Workload.NativeGame"
+    }
+        
+    Foreach ($i in Get-VSSetupInstance) {
+        $installPath = $i.InstallationPath
+        $currentcommandLineArgs = ($commandLineArgs + "--installPath `"$installPath`"")
+        Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installershell.exe" -Wait -ArgumentList $currentcommandLineArgs
+    }
+}
+    
+if ($Settings[5].Selected -eq $true) {
+    # Adds Graphic Tools package required for d3d12 debug layer
+    Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0"
+}
+    
+if ($Settings[36].Selected -eq $true) {
+    Restart-Computer
+}
+
+Pop-Location
