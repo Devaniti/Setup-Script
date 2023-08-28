@@ -105,6 +105,9 @@ function PromptUser() {
 
     $CurrentOffset += (0.8 * $DPI)
 
+    $form.AutoScroll = $true
+    $Width = $Width + (0.1 * $DPI)
+
     $form.Size = New-Object System.Drawing.Size($Width, $CurrentOffset)
     $form.Topmost = $true
     $result = $form.ShowDialog()
