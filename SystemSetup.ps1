@@ -7,6 +7,42 @@ if (!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]
 
 Push-Location $env:TEMP
 
+function ShowFileExtensions {
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name HideFileExt -Value 0
+}
+function ShowHiddenFiles {
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name Hidden -Value 1
+}
+function ShowFullFilePathInExplorer {
+    New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -ErrorAction 'SilentlyContinue'
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -Name FullPath -Value 1
+}
+function UseFullRightClickMenu {
+    New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -ErrorAction 'SilentlyContinue'
+    New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -ErrorAction 'SilentlyContinue'
+    Set-ItemProperty -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(Default)" -Value "" -ErrorAction 'Continue'
+}
+function EnableWindowsDeveloperMode {
+    Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name AllowDevelopmentWithoutDevLicense -Value 1
+}
+function InstallGraphicTools {
+    Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0" -ErrorAction 'Continue'
+}
+function InstallWinget {
+    Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+    Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
+    Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.7.3/Microsoft.UI.Xaml.2.7.x64.appx -OutFile Microsoft.UI.Xaml.2.7.x64.appx
+    Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction 'SilentlyContinue'
+    Add-AppxPackage Microsoft.UI.Xaml.2.7.x64.appx -ErrorAction 'SilentlyContinue'
+    Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -ErrorAction 'SilentlyContinue'
+    Remove-Item -Path Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+    Remove-Item -Path Microsoft.VCLibs.x64.14.00.Desktop.appx
+    Remove-Item -Path Microsoft.UI.Xaml.2.7.x64.appx
+}
+function RestartComputer {
+    Restart-Computer
+}
+
 # Window management to ask user about settings to set
 function PromptUser() {    
     Add-Type -AssemblyName System.Windows.Forms
@@ -17,13 +53,13 @@ function PromptUser() {
 
     # List of options
     $Options = @()
-    $Options += @{Name = "Show file extensions."; Enabled = $true }
-    $Options += @{Name = "Show hidden files."; Enabled = $true }
-    $Options += @{Name = "Show full file path in explorer."; Enabled = $true }
-    $Options += @{Name = "Always use full right click menu in explorer."; Enabled = $false }
-    $Options += @{Name = "Enable Windows Developer Mode."; Enabled = $true }
-    $Options += @{Name = "Install Graphic Tools component (required for d3d12 debug layer)."; Enabled = $true }
-    $Options += @{Name = "Install Winget (required to install software below)."; Enabled = $true }
+    $Options += @{Name = "Show file extensions."; Enabled = $true; Callback = $function:ShowFileExtensions }
+    $Options += @{Name = "Show hidden files."; Enabled = $true; Callback = $function:ShowHiddenFiles }
+    $Options += @{Name = "Show full file path in explorer."; Enabled = $true; Callback = $function:ShowFullFilePathInExplorer }
+    $Options += @{Name = "Always use full right click menu in explorer."; Enabled = $false; Callback = $function:UseFullRightClickMenu }
+    $Options += @{Name = "Enable Windows Developer Mode."; Enabled = $true; Callback = $function:EnableWindowsDeveloperMode }
+    $Options += @{Name = "Install Graphic Tools component (required for d3d12 debug layer)."; Enabled = $true; Callback = $function:InstallGraphicTools }
+    $Options += @{Name = "Install Winget (required to install software below)."; Enabled = $true; Callback = $function:InstallWinget }
     $Options += @{Name = "Install Google Chrome."; Enabled = $true; Package = "Google.Chrome" }
     $Options += @{Name = "Install Mozilla Firefox."; Enabled = $false; Package = "Mozilla.Firefox" }
     $Options += @{Name = "Install Opera."; Enabled = $false; Package = "Opera.Opera" }
@@ -34,15 +70,14 @@ function PromptUser() {
     $Options += @{Name = "Install Visual Studio 2022 Community."; Enabled = $true; Package = "Microsoft.VisualStudio.2022.Community" }
     $Options += @{Name = "Install Visual Studio 2022 Professional."; Enabled = $false; Package = "Microsoft.VisualStudio.2022.Professional" }
     $Options += @{Name = "Install Visual Studio 2022 Enterprise."; Enabled = $false; Package = "Microsoft.VisualStudio.2022.Enterprise" }
-    $Options += @{Name = "Add .NET desktop development components to all Visual Studio instances ."; Enabled = $true }
-    $Options += @{Name = "Add C++ desktop development components to all Visual Studio instances ."; Enabled = $true }
-    $Options += @{Name = "Add UWP development components to all Visual Studio instances ."; Enabled = $true }
-    $Options += @{Name = "Add Game development with C++ components to all Visual Studio instances ."; Enabled = $true }
+    $Options += @{Name = "Add .NET desktop development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.ManagedDesktop" }
+    $Options += @{Name = "Add C++ desktop development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.NativeDesktop" }
+    $Options += @{Name = "Add UWP development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.Universal" }
+    $Options += @{Name = "Add Game development with C++ components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.NativeGame" }
     $Options += @{Name = "Install Microsoft PIX on Windows."; Enabled = $true; Package = "Microsoft.PIX" }
     $Options += @{Name = "Install RenderDoc."; Enabled = $true; Package = "BaldurKarlsson.RenderDoc" }
     $Options += @{Name = "Install Vulkan SDK."; Enabled = $true; Package = "KhronosGroup.VulkanSDK" }
     $Options += @{Name = "Install 7zip."; Enabled = $true; Package = "7zip.7zip" }
-    $Options += @{Name = "Install Java Runtime Environment."; Enabled = $true; Package = "Oracle.JavaRuntimeEnvironment" }
     $Options += @{Name = "Install Python 3.11."; Enabled = $true; Package = "Python.Python.3.11" }
     $Options += @{Name = "Install OBS Studio."; Enabled = $false; Package = "OBSProject.OBSStudio" }
     $Options += @{Name = "Install VLC."; Enabled = $false; Package = "OBSProject.OBSStudio" }
@@ -53,7 +88,7 @@ function PromptUser() {
     $Options += @{Name = "Install PowerToys."; Enabled = $false; Package = "Microsoft.PowerToys" }
     $Options += @{Name = "Install Steam."; Enabled = $false; Package = "Valve.Steam" }
     $Options += @{Name = "Install Epic Games Launcher."; Enabled = $false; Package = "EpicGames.EpicGamesLauncher" }
-    $Options += @{Name = "Restart Computer after completion."; Enabled = $true }
+    $Options += @{Name = "Restart Computer after completion."; Enabled = $true; LateCallback = $function:RestartComputer }
 
     #Enable DPI awareness
     $code = @"
@@ -81,7 +116,7 @@ function PromptUser() {
         $CheckboxObj.Font = $Font
         $CheckboxObj.Text = $i.Name
         $form.Controls.Add($CheckboxObj)
-        $Rows += @{Checkbox = $CheckboxObj; Package = $i.Package }
+        $Rows += @{Checkbox = $CheckboxObj; Option = $i }
         $CurrentOffset += (0.25 * $DPI)
     }
 
@@ -118,7 +153,9 @@ function PromptUser() {
 
     $Result = @()
     Foreach ($i in $Rows) {
-        $Result += @{Selected = $i.Checkbox.Checked; Package = $i.Package }
+        $temp = $i.Option;
+        $temp.Enabled = $i.Checkbox.Checked;
+        $Result += $temp
     }
     return $Result
 }
@@ -129,57 +166,22 @@ if ($null -eq $Settings) {
     Pop-Location
     return
 }
-    
-# Windows explorer settings
-if ($Settings[0].Selected -eq $true) {
-    # Sets option to always show file extensions
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name HideFileExt -Value 0
-}
-    
-if ($Settings[1].Selected -eq $true) {
-    # Sets option to show hidden files (but not OS protected files)
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name Hidden -Value 1
-}
-    
-if ($Settings[2].Selected -eq $true) {
-    # Sets option to show full path instead of just folder name in file explorer window title
-    New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -ErrorAction 'SilentlyContinue'
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" -Name FullPath -Value 1
-}
-    
-if ($Settings[3].Selected -eq $true) {
-    # Reverts Windows 11's right mouse click menu back to full Windows 10 like menu
-    New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -ErrorAction 'SilentlyContinue'
-    New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -ErrorAction 'SilentlyContinue'
-    Set-ItemProperty -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(Default)" -Value "" -ErrorAction 'Continue'
-}
-    
-if ($Settings[4].Selected -eq $true) {
-    # Enables Windows developer mode, which is required for some features (e.g. DXR debugging in PIX)
-    Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name AllowDevelopmentWithoutDevLicense -Value 1
-}
-    
-if ($Settings[5].Selected -eq $true) {
-    # Adds Graphic Tools package required for d3d12 debug layer
-    Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0" -ErrorAction 'Continue'
-}
-    
-if ($Settings[10].Selected -eq $true) {
-    Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-    Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
-    Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.7.3/Microsoft.UI.Xaml.2.7.x64.appx -OutFile Microsoft.UI.Xaml.2.7.x64.appx
-    Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction 'SilentlyContinue'
-    Add-AppxPackage Microsoft.UI.Xaml.2.7.x64.appx -ErrorAction 'SilentlyContinue'
-    Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -ErrorAction 'SilentlyContinue'
-}
-    
+
+$VSModulesToInstall = @()
+
 Foreach ($i in $Settings) {
-    if ($i.Selected -and ($null -ne $i.Package)) {
+    if ($i.Enabled -and ($null -ne $i.Callback)) {
+        $i.Callback.Invoke()
+    }
+    if ($i.Enabled -and ($null -ne $i.Package)) {
         winget install -e --accept-source-agreements --accept-package-agreements $i.Package
     }
+    if ($i.Enabled -and ($null -ne $i.VSComponent)) {
+        $VSModulesToInstall += "--add $($i.VSComponent);includeRecommended"
+    }
 }
-    
-if (($Settings[17].Selected -eq $true) -or ($Settings[18].Selected -eq $true) -or ($Settings[19].Selected -eq $true) -or ($Settings[20].Selected -eq $true)) {
+
+if (0 -ne $VSModulesToInstall.Length) {
     Set-ExecutionPolicy unrestricted -Scope Process -Force
     
     if (-not (Get-Module -ListAvailable -Name VSSetup)) {
@@ -192,22 +194,7 @@ if (($Settings[17].Selected -eq $true) -or ($Settings[18].Selected -eq $true) -o
     $commandLineArgs += "--installWhileDownloading"
     $commandLineArgs += "--passive"
     $commandLineArgs += "--norestart"
-    
-    if ($Settings[17].Selected -eq $true) {
-        $commandLineArgs += "--add Microsoft.VisualStudio.Workload.ManagedDesktop"
-    }
-        
-    if ($Settings[18].Selected -eq $true) {
-        $commandLineArgs += " --add Microsoft.VisualStudio.Workload.NativeDesktop"
-    }
-        
-    if ($Settings[19].Selected -eq $true) {
-        $commandLineArgs += " --add Microsoft.VisualStudio.Workload.Universal"
-    }
-        
-    if ($Settings[20].Selected -eq $true) {
-        $commandLineArgs += " --add Microsoft.VisualStudio.Workload.NativeGame"
-    }
+    $commandLineArgs += $VSModulesToInstall;
         
     Foreach ($i in Get-VSSetupInstance) {
         $installPath = $i.InstallationPath
@@ -215,14 +202,11 @@ if (($Settings[17].Selected -eq $true) -or ($Settings[18].Selected -eq $true) -o
         Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installershell.exe" -Wait -ArgumentList $currentcommandLineArgs
     }
 }
-    
-if ($Settings[5].Selected -eq $true) {
-    # Adds Graphic Tools package required for d3d12 debug layer
-    Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0"
-}
-    
-if ($Settings[36].Selected -eq $true) {
-    Restart-Computer
+
+Foreach ($i in $Settings) {
+    if ($i.Enabled -and ($null -ne $i.LateCallback)) {
+        $i.LateCallback.Invoke()
+    }
 }
 
 Pop-Location
