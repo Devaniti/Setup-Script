@@ -65,6 +65,7 @@ function PromptUser() {
     $Options += @{Name = "Install Opera."; Enabled = $false; Package = "Opera.Opera" }
     $Options += @{Name = "Install Git."; Enabled = $true; Package = "Git.Git" }
     $Options += @{Name = "Install P4V."; Enabled = $false; Package = "Perforce.P4V" }
+    $Options += @{Name = "Install Cmake."; Enabled = $true; Package = "Kitware.CMake" }
     $Options += @{Name = "Install Visual Studio Code."; Enabled = $true; Package = "Microsoft.VisualStudioCode" }
     $Options += @{Name = "Install CLion."; Enabled = $false; Package = "JetBrains.CLion" }
     $Options += @{Name = "Install Visual Studio 2022 Community."; Enabled = $true; Package = "Microsoft.VisualStudio.2022.Community" }
@@ -78,7 +79,7 @@ function PromptUser() {
     $Options += @{Name = "Install RenderDoc."; Enabled = $true; Package = "BaldurKarlsson.RenderDoc" }
     $Options += @{Name = "Install Vulkan SDK."; Enabled = $true; Package = "KhronosGroup.VulkanSDK" }
     $Options += @{Name = "Install 7zip."; Enabled = $true; Package = "7zip.7zip" }
-    $Options += @{Name = "Install Python 3.11."; Enabled = $true; Package = "Python.Python.3.11" }
+    $Options += @{Name = "Install Python 3.12."; Enabled = $true; Package = "Python.Python.3.12" }
     $Options += @{Name = "Install OBS Studio."; Enabled = $false; Package = "OBSProject.OBSStudio" }
     $Options += @{Name = "Install VLC."; Enabled = $false; Package = "OBSProject.OBSStudio" }
     $Options += @{Name = "Install Slack."; Enabled = $false; Package = "SlackTechnologies.Slack" }
