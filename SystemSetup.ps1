@@ -29,15 +29,19 @@ function InstallGraphicTools {
     Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0" -ErrorAction 'Continue'
 }
 function InstallWinget {
+    $PrevProgressPreference = $ProgressPreference
+    $progressPreference = 'silentlyContinue'
+    Write-Information "Downloading WinGet and its dependencies..."
     Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
     Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
-    Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.7.3/Microsoft.UI.Xaml.2.7.x64.appx -OutFile Microsoft.UI.Xaml.2.7.x64.appx
+    Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
+    $ProgressPreference = $PrevProgressPreference
     Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction 'SilentlyContinue'
-    Add-AppxPackage Microsoft.UI.Xaml.2.7.x64.appx -ErrorAction 'SilentlyContinue'
+    Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx -ErrorAction 'SilentlyContinue'
     Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -ErrorAction 'SilentlyContinue'
     Remove-Item -Path Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
     Remove-Item -Path Microsoft.VCLibs.x64.14.00.Desktop.appx
-    Remove-Item -Path Microsoft.UI.Xaml.2.7.x64.appx
+    Remove-Item -Path Microsoft.UI.Xaml.2.8.x64.appx 
 }
 function RestartComputer {
     Restart-Computer
@@ -200,7 +204,17 @@ if (0 -ne $VSModulesToInstall.Length) {
     Foreach ($i in Get-VSSetupInstance) {
         $installPath = $i.InstallationPath
         $currentcommandLineArgs = ($commandLineArgs + "--installPath `"$installPath`"")
-        Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installershell.exe" -Wait -ArgumentList $currentcommandLineArgs
+        Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installershell.exe" -Wait -ArgumentList $currentcommandLineArgs | Out-Null
+    }
+
+    # vs_installershell seem to create broken Nuget.config with no entries
+    # first we check if it is indeed broken
+    # default config will be larger than 150 bytes
+    $file = Get-Item -LiteralPath "$env:APPDATA\nuget\nuget.config" -ErrorAction 'SilentlyContinue'
+    if ($file.Length -lt 150) {
+        # If it is broken, we can just remove broken config, 
+        # it will be recreated by nuget on first use with correct defaults
+        Remove-Item $file -ErrorAction 'SilentlyContinue'
     }
 }
 
