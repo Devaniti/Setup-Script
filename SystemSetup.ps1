@@ -29,13 +29,15 @@ function InstallGraphicTools {
     Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0" -ErrorAction 'Continue'
 }
 function InstallWinget {
+    Write-Output "Downloading WinGet and its dependencies..." | Out-Host
+    Write-Output "No progress output during download, this may take a while..." | Out-Host
     $PrevProgressPreference = $ProgressPreference
     $progressPreference = 'silentlyContinue'
-    Write-Information "Downloading WinGet and its dependencies..."
     Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
     Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
     Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
     $ProgressPreference = $PrevProgressPreference
+    Write-Output "Download finished, installing WinGet" | Out-Host
     Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction 'SilentlyContinue'
     Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx -ErrorAction 'SilentlyContinue'
     Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -ErrorAction 'SilentlyContinue'
@@ -43,6 +45,27 @@ function InstallWinget {
     Remove-Item -Path Microsoft.VCLibs.x64.14.00.Desktop.appx
     Remove-Item -Path Microsoft.UI.Xaml.2.8.x64.appx 
 }
+
+function SetPowershellExecutionPolicyToUnrestricted {
+    # Run on built-in powershell
+    Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+    # Refresh path to see new powershell
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    # Run again, but on new powershell
+    pwsh -command "Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force"
+}
+
+function AllowLongPathsInGit {
+    # Refresh path to include git
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    git config --system core.longpaths true
+}
+
+function DisableWindowsAppExecutionAliasForPython {
+    Remove-Item $env:LOCALAPPDATA\Microsoft\WindowsApps\python.exe
+    Remove-Item $env:LOCALAPPDATA\Microsoft\WindowsApps\python3.exe
+}
+
 function RestartComputer {
     Restart-Computer
 }
@@ -67,7 +90,10 @@ function PromptUser() {
     $Options += @{Name = "Install Google Chrome."; Enabled = $true; Package = "Google.Chrome" }
     $Options += @{Name = "Install Mozilla Firefox."; Enabled = $false; Package = "Mozilla.Firefox" }
     $Options += @{Name = "Install Opera."; Enabled = $false; Package = "Opera.Opera" }
+    $Options += @{Name = "Install Latest Powershell."; Enabled = $true; Package = "Microsoft.PowerShell" }
+    $Options += @{Name = "Set Powershell execution policy to unrestricted."; Enabled = $true; Callback = $function:SetPowershellExecutionPolicyToUnrestricted }
     $Options += @{Name = "Install Git."; Enabled = $true; Package = "Git.Git" }
+    $Options += @{Name = "Allow long paths in Git."; Enabled = $true; Callback = $function:AllowLongPathsInGit }
     $Options += @{Name = "Install P4V."; Enabled = $false; Package = "Perforce.P4V" }
     $Options += @{Name = "Install Cmake."; Enabled = $true; Package = "Kitware.CMake" }
     $Options += @{Name = "Install Visual Studio Code."; Enabled = $true; Package = "Microsoft.VisualStudioCode" }
@@ -84,6 +110,7 @@ function PromptUser() {
     $Options += @{Name = "Install Vulkan SDK."; Enabled = $true; Package = "KhronosGroup.VulkanSDK" }
     $Options += @{Name = "Install 7zip."; Enabled = $true; Package = "7zip.7zip" }
     $Options += @{Name = "Install Python 3.12."; Enabled = $true; Package = "Python.Python.3.12" }
+    $Options += @{Name = "Disable Windows App Execution Alias for Python."; Enabled = $true; Callback = $function:DisableWindowsAppExecutionAliasForPython }
     $Options += @{Name = "Install OBS Studio."; Enabled = $false; Package = "OBSProject.OBSStudio" }
     $Options += @{Name = "Install VLC."; Enabled = $false; Package = "OBSProject.OBSStudio" }
     $Options += @{Name = "Install Slack."; Enabled = $false; Package = "SlackTechnologies.Slack" }
@@ -107,7 +134,7 @@ function PromptUser() {
     $Width = (5.5 * $DPI)
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = 'Graphics Dev Machine Setup'
+    $form.Text = 'Graphics Dev Machine Setup by Devaniti'
     $form.StartPosition = 'CenterScreen'
 
     $CurrentOffset = (0.05 * $DPI)
@@ -148,7 +175,9 @@ function PromptUser() {
     $form.AutoScroll = $true
     $Width = $Width + (0.1 * $DPI)
 
-    $form.Size = New-Object System.Drawing.Size($Width, $CurrentOffset)
+    $FormHeight = [math]::min($CurrentOffset, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height - (0.8 * $DPI))
+
+    $form.Size = New-Object System.Drawing.Size($Width, $FormHeight)
     $form.Topmost = $true
     $result = $form.ShowDialog()
 
@@ -176,17 +205,21 @@ $VSModulesToInstall = @()
 
 Foreach ($i in $Settings) {
     if ($i.Enabled -and ($null -ne $i.Callback)) {
+        Write-Output "Running callback for $($i.Name)"
         $i.Callback.Invoke()
     }
     if ($i.Enabled -and ($null -ne $i.Package)) {
-        winget install -e --accept-source-agreements --accept-package-agreements $i.Package
+        Write-Output "Installing $($i.Name)"
+        winget install -e --accept-source-agreements --accept-package-agreements --scope machine $i.Package
     }
     if ($i.Enabled -and ($null -ne $i.VSComponent)) {
+        Write-Output "Added $($i.Name) to list of Visual Studio components"
         $VSModulesToInstall += "--add $($i.VSComponent);includeRecommended"
     }
 }
 
 if (0 -ne $VSModulesToInstall.Length) {
+    Write-Output "Installing Visual Studio components"
     Set-ExecutionPolicy unrestricted -Scope Process -Force
     
     if (-not (Get-Module -ListAvailable -Name VSSetup)) {
@@ -220,6 +253,7 @@ if (0 -ne $VSModulesToInstall.Length) {
 
 Foreach ($i in $Settings) {
     if ($i.Enabled -and ($null -ne $i.LateCallback)) {
+        Write-Output "Running late callback for $($i.Name)"
         $i.LateCallback.Invoke()
     }
 }
