@@ -22,6 +22,18 @@ function UseFullRightClickMenu {
     New-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -ErrorAction 'SilentlyContinue'
     Set-ItemProperty -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(Default)" -Value "" -ErrorAction 'Continue'
 }
+function DisableBingSearchInStartMenuForCurrentUser {
+    $RegistryPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
+
+    if (Test-Path $RegistryPath) {
+        Set-ItemProperty -Path $RegistryPath -Name "BingSearchEnabled" -Value 0
+        Write-Host "Web search in Start Menu has been disabled."
+    } else {
+        New-Item -Path $RegistryPath -Force
+        New-ItemProperty -Path $RegistryPath -Name "BingSearchEnabled" -Value 0 -PropertyType DWORD
+        Write-Host "Web search in Start Menu has been disabled."
+    }
+}
 function EnableWindowsDeveloperMode {
     Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name AllowDevelopmentWithoutDevLicense -Value 1
 }
@@ -84,6 +96,7 @@ function PromptUser() {
     $Options += @{Name = "Show hidden files."; Enabled = $true; Callback = $function:ShowHiddenFiles }
     $Options += @{Name = "Show full file path in explorer."; Enabled = $true; Callback = $function:ShowFullFilePathInExplorer }
     $Options += @{Name = "Always use full right click menu in explorer."; Enabled = $false; Callback = $function:UseFullRightClickMenu }
+    $Options += @{Name = "Disable Bing Search in start menu for current user."; Enabled = $true; Callback = $function:DisableBingSearchInStartMenuForCurrentUser }
     $Options += @{Name = "Enable Windows Developer Mode."; Enabled = $true; Callback = $function:EnableWindowsDeveloperMode }
     $Options += @{Name = "Install Graphic Tools component (required for d3d12 debug layer)."; Enabled = $true; Callback = $function:InstallGraphicTools }
     $Options += @{Name = "Install Winget (required to install software below)."; Enabled = $true; Callback = $function:InstallWinget }
