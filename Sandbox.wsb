@@ -9,5 +9,6 @@
     </MappedFolders>
     <LogonCommand>
       <Command>cmd /c start powershell -ExecutionPolicy Bypass -File C:\Shared\SandboxAutostart.ps1</Command>
-    </LogonCommand>    
+    </LogonCommand>
+    <MemoryInMB>16384</MemoryInMB>
 </Configuration>

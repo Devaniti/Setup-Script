@@ -41,21 +41,12 @@ function InstallGraphicTools {
     Add-WindowsCapability -Online -Name "Tools.Graphics.DirectX~~~~0.0.1.0" -ErrorAction 'Continue'
 }
 function InstallWinget {
-    Write-Output "Downloading WinGet and its dependencies..." | Out-Host
-    Write-Output "No progress output during download, this may take a while..." | Out-Host
-    $PrevProgressPreference = $ProgressPreference
-    $progressPreference = 'silentlyContinue'
-    Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-    Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
-    Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
-    $ProgressPreference = $PrevProgressPreference
-    Write-Output "Download finished, installing WinGet" | Out-Host
-    Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction 'SilentlyContinue'
-    Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx -ErrorAction 'SilentlyContinue'
-    Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -ErrorAction 'SilentlyContinue'
-    Remove-Item -Path Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-    Remove-Item -Path Microsoft.VCLibs.x64.14.00.Desktop.appx
-    Remove-Item -Path Microsoft.UI.Xaml.2.8.x64.appx 
+    Write-Host "Installing WinGet PowerShell module from PSGallery..."
+    Install-PackageProvider -Name NuGet -Force | Out-Null
+    Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null
+    Write-Host "Using Repair-WinGetPackageManager cmdlet to bootstrap WinGet..."
+    Repair-WinGetPackageManager -AllUsers
+    Write-Host "Done."
 }
 
 function SetPowershellExecutionPolicyToUnrestricted {
@@ -100,6 +91,8 @@ function PromptUser() {
     $Options += @{Name = "Enable Windows Developer Mode."; Enabled = $true; Callback = $function:EnableWindowsDeveloperMode }
     $Options += @{Name = "Install Graphic Tools component (required for d3d12 debug layer)."; Enabled = $true; Callback = $function:InstallGraphicTools }
     $Options += @{Name = "Install Winget (required to install software below)."; Enabled = $true; Callback = $function:InstallWinget }
+    $Options += @{Name = "Install Visual C++ Redistributable 2015+ x64."; Enabled = $true; Package = "Microsoft.VCRedist.2015+.x64" }
+    $Options += @{Name = "Install Visual C++ Redistributable 2015+ x86."; Enabled = $true; Package = "Microsoft.VCRedist.2015+.x86" }
     $Options += @{Name = "Install Google Chrome."; Enabled = $true; Package = "Google.Chrome" }
     $Options += @{Name = "Install Mozilla Firefox."; Enabled = $false; Package = "Mozilla.Firefox" }
     $Options += @{Name = "Install Opera."; Enabled = $false; Package = "Opera.Opera" }
@@ -108,6 +101,7 @@ function PromptUser() {
     $Options += @{Name = "Install Git."; Enabled = $true; Package = "Git.Git" }
     $Options += @{Name = "Allow long paths in Git."; Enabled = $true; Callback = $function:AllowLongPathsInGit }
     $Options += @{Name = "Install P4V."; Enabled = $false; Package = "Perforce.P4V" }
+    $Options += @{Name = "Install Meson."; Enabled = $true; Package = "mesonbuild.meson" }
     $Options += @{Name = "Install Cmake."; Enabled = $true; Package = "Kitware.CMake" }
     $Options += @{Name = "Install Visual Studio Code."; Enabled = $true; Package = "Microsoft.VisualStudioCode" }
     $Options += @{Name = "Install CLion."; Enabled = $false; Package = "JetBrains.CLion" }
@@ -118,19 +112,31 @@ function PromptUser() {
     $Options += @{Name = "Add C++ desktop development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.NativeDesktop" }
     $Options += @{Name = "Add UWP development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.Universal" }
     $Options += @{Name = "Add Game development with C++ components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.NativeGame" }
+    $Options += @{Name = "Install RustRover."; Enabled = $false; Package = "JetBrains.RustRover" }
     $Options += @{Name = "Install Microsoft PIX on Windows."; Enabled = $true; Package = "Microsoft.PIX" }
     $Options += @{Name = "Install RenderDoc."; Enabled = $true; Package = "BaldurKarlsson.RenderDoc" }
     $Options += @{Name = "Install Vulkan SDK."; Enabled = $true; Package = "KhronosGroup.VulkanSDK" }
     $Options += @{Name = "Install 7zip."; Enabled = $true; Package = "7zip.7zip" }
-    $Options += @{Name = "Install Python 3.12."; Enabled = $true; Package = "Python.Python.3.12" }
+    $Options += @{Name = "Install Python 3.10."; Enabled = $false; Package = "Python.Python.3.10" }
+    $Options += @{Name = "Install Python 3.11."; Enabled = $false; Package = "Python.Python.3.11" }
+    $Options += @{Name = "Install Python 3.12."; Enabled = $false; Package = "Python.Python.3.12" }
+    $Options += @{Name = "Install Python 3.13."; Enabled = $false; Package = "Python.Python.3.13" }
+    $Options += @{Name = "Install Python 3.14."; Enabled = $true; Package = "Python.Python.3.14" }
     $Options += @{Name = "Disable Windows App Execution Alias for Python."; Enabled = $true; Callback = $function:DisableWindowsAppExecutionAliasForPython }
     $Options += @{Name = "Install OBS Studio."; Enabled = $false; Package = "OBSProject.OBSStudio" }
     $Options += @{Name = "Install VLC."; Enabled = $false; Package = "OBSProject.OBSStudio" }
+    $Options += @{Name = "Install GIMP 3."; Enabled = $false; Package = "GIMP.GIMP.3" }
     $Options += @{Name = "Install Slack."; Enabled = $false; Package = "SlackTechnologies.Slack" }
     $Options += @{Name = "Install Zoom."; Enabled = $false; Package = "Zoom.Zoom" }
     $Options += @{Name = "Install Discord."; Enabled = $false; Package = "Discord.Discord" }
     $Options += @{Name = "Install Microsoft Office."; Enabled = $false; Package = "Microsoft.Office" }
     $Options += @{Name = "Install PowerToys."; Enabled = $false; Package = "Microsoft.PowerToys" }
+    $Options += @{Name = "Install GPU-Z."; Enabled = $false; Package = "TechPowerUp.GPU-Z" }
+    $Options += @{Name = "Install CPU-Z."; Enabled = $false; Package = "CPUID.CPU-Z" }
+    $Options += @{Name = "Install HWMonitor."; Enabled = $false; Package = "CPUID.HWMonitor" }
+    $Options += @{Name = "Install CrystalDiskInfo."; Enabled = $false; Package = "CrystalDewWorld.CrystalDiskInfo" }
+    $Options += @{Name = "Install CrystalDiskMark."; Enabled = $false; Package = "CrystalDewWorld.CrystalDiskMark" }
+    $Options += @{Name = "Install WizTree."; Enabled = $false; Package = "AntibodySoftware.WizTree" }
     $Options += @{Name = "Install Steam."; Enabled = $false; Package = "Valve.Steam" }
     $Options += @{Name = "Install Epic Games Launcher."; Enabled = $false; Package = "EpicGames.EpicGamesLauncher" }
     $Options += @{Name = "Restart Computer after completion."; Enabled = $true; LateCallback = $function:RestartComputer }
