@@ -105,9 +105,12 @@ function PromptUser() {
     $Options += @{Name = "Install Cmake."; Enabled = $true; Package = "Kitware.CMake" }
     $Options += @{Name = "Install Visual Studio Code."; Enabled = $true; Package = "Microsoft.VisualStudioCode" }
     $Options += @{Name = "Install CLion."; Enabled = $false; Package = "JetBrains.CLion" }
-    $Options += @{Name = "Install Visual Studio 2022 Community."; Enabled = $true; Package = "Microsoft.VisualStudio.2022.Community" }
+    $Options += @{Name = "Install Visual Studio 2022 Community."; Enabled = $false; Package = "Microsoft.VisualStudio.2022.Community" }
     $Options += @{Name = "Install Visual Studio 2022 Professional."; Enabled = $false; Package = "Microsoft.VisualStudio.2022.Professional" }
     $Options += @{Name = "Install Visual Studio 2022 Enterprise."; Enabled = $false; Package = "Microsoft.VisualStudio.2022.Enterprise" }
+    $Options += @{Name = "Install Visual Studio 2026 Community."; Enabled = $true; Package = "Microsoft.VisualStudio.Community" }
+    $Options += @{Name = "Install Visual Studio 2026 Professional."; Enabled = $false; Package = "Microsoft.VisualStudio.Professional" }
+    $Options += @{Name = "Install Visual Studio 2026 Enterprise."; Enabled = $false; Package = "Microsoft.VisualStudio.Enterprise" }
     $Options += @{Name = "Add .NET desktop development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.ManagedDesktop" }
     $Options += @{Name = "Add C++ desktop development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.NativeDesktop" }
     $Options += @{Name = "Add UWP development components to all Visual Studio instances ."; Enabled = $true; VSComponent = "Microsoft.VisualStudio.Workload.Universal" }
@@ -228,7 +231,7 @@ Foreach ($i in $Settings) {
         $i.Callback.Invoke()
     }
     if ($i.Enabled -and ($null -ne $i.Package)) {
-        Write-Output "Installing $($i.Name)"
+        Write-Output "Running $($i.Name)"
         winget install -e --accept-source-agreements --accept-package-agreements --scope machine $i.Package
     }
     if ($i.Enabled -and ($null -ne $i.VSComponent)) {
